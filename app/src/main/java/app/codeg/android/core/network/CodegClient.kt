@@ -1,6 +1,7 @@
 package app.codeg.android.core.network
 
 import app.codeg.android.core.model.AgentType
+import app.codeg.android.core.model.CustomAgentNames
 import app.codeg.android.core.model.ConversationConnectionInfo
 import app.codeg.android.core.model.ConversationDetail
 import app.codeg.android.core.model.ConversationIdBody
@@ -544,19 +545,14 @@ class CodegClient(
         send("mcp_remove_server", body)
     }
 
-    /**
-     * Registered agents. Agent types this build doesn't recognise — a newer server
-     * exposing more than the app knows (this build recognises every current server
-     * type through [AgentType.CURSOR], so this is a forward-compat safety net) — are
-     * DROPPED rather than left to collapse onto [AgentType.CLAUDE_CODE] during decode.
-     * Otherwise each unknown agent would masquerade as Claude Code and the Agents
-     * list, keyed by `agentType`, would hit duplicate keys and crash its LazyColumn.
-     * See [decodeAgentList].
-     */
+    /** Registered agents, user-registered ACP ones (`custom:<id>`) included. */
     suspend fun acpListAgents(): List<AcpAgentInfo> {
         val text = send("acp_list_agents", encode(EmptyBody))
-        return runCatching { decodeAgentList(text) }
+        val agents = runCatching { decodeAgentList(text) }
             .getOrElse { throw ApiError.Decoding(it.message ?: "Failed to decode response") }
+        // The only place a custom agent's name reaches the app.
+        CustomAgentNames.publish(agents)
+        return agents
     }
 
     /**
@@ -993,26 +989,13 @@ class CodegClient(
         }
 
         /**
-         * Decode an `acp_list_agents` response, dropping any entry whose
-         * `agent_type` is unknown to this build (it would otherwise decode to
-         * [AgentType.CLAUDE_CODE] and collide with the real Claude Code row) and
-         * de-duplicating by agent type — the Agents/Experts/Skills lists are keyed
-         * by `agentType`, so a repeated type would crash their LazyColumn.
+         * Decode an `acp_list_agents` response, keeping every row. De-duplicated by
+         * agent type: the lists are keyed by it and a repeated key crashes LazyColumn.
          */
         fun decodeAgentList(text: String): List<AcpAgentInfo> {
             val serializer = ListSerializer(AcpAgentInfo.serializer())
-            val decoded = when (val root = CodegJson.response.parseToJsonElement(text)) {
-                is JsonArray -> {
-                    val known = root.filter { el ->
-                        val wire = ((el as? JsonObject)?.get("agent_type") as? JsonPrimitive)
-                            ?.takeIf { it.isString }?.content
-                        wire != null && AgentType.knownFromWire(wire) != null
-                    }
-                    CodegJson.response.decodeFromJsonElement(serializer, JsonArray(known))
-                }
-                else -> CodegJson.response.decodeFromString(serializer, text)
-            }
-            return decoded.distinctBy { it.agentType }
+            return CodegJson.response.decodeFromString(serializer, text)
+                .distinctBy { it.agentType }
         }
 
         /** True when the raw response is empty or the JSON literal `null`. */

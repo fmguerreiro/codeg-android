@@ -39,27 +39,27 @@ class CodegClientStaticTest {
     }
 
     @Test
-    fun `decodeAgentList decodes the newest agent types and drops still-unknown ones`() {
-        // code_buddy / kimi_code / pi / grok are now first-class AgentType values, so
-        // they decode (grok also carries its own config payload). A genuinely-unknown
-        // future wire must still be dropped, not collapsed onto claude_code.
+    fun `decodeAgentList keeps every row the server sent`() {
+        // `custom:<id>` and an unrecognised built-in keep identities of their own
+        // instead of being dropped or collapsed onto claude_code.
         val json = """
             [
               {"agent_type":"claude_code","name":"Claude Code"},
-              {"agent_type":"code_buddy","name":"CodeBuddy"},
-              {"agent_type":"codex","name":"Codex"},
-              {"agent_type":"kimi_code","name":"Kimi Code"},
-              {"agent_type":"pi","name":"Pi"},
+              {"agent_type":"deepseek","name":"DeepSeek Harness"},
+              {"agent_type":"qoder","name":"Qoder"},
+              {"agent_type":"antigravity","name":"Google Antigravity"},
               {"agent_type":"grok","name":"Grok","grok_config_toml":"[ui]\n","grok_settings":{"permission_mode":"ask","default_reasoning_effort":"high"}},
               {"agent_type":"cursor","name":"Cursor","cursor_cli_config_json":"{}","cursor_settings":{"sandbox_mode":"enabled","permissions_allow":["Shell(ls)"],"permissions_deny":["Shell(rm)"]}},
+              {"agent_type":"custom:qwen-code","name":"Qwen Code"},
               {"agent_type":"future_agent_9000","name":"Future"}
             ]
         """.trimIndent()
         val agents = CodegClient.decodeAgentList(json)
         assertEquals(
             listOf(
-                AgentType.CLAUDE_CODE, AgentType.CODE_BUDDY, AgentType.CODEX,
-                AgentType.KIMI_CODE, AgentType.PI, AgentType.GROK, AgentType.CURSOR,
+                AgentType.CLAUDE_CODE, AgentType.DEEPSEEK, AgentType.QODER,
+                AgentType.ANTIGRAVITY, AgentType.GROK, AgentType.CURSOR,
+                AgentType.Custom("qwen-code"), AgentType.Unknown("future_agent_9000"),
             ),
             agents.map { it.agentType },
         )
@@ -76,18 +76,25 @@ class CodegClientStaticTest {
 
     @Test
     fun `decodeAgentList never yields duplicate agent-type keys`() {
-        // Several unknown future types alongside the real claude_code must NOT collapse
-        // into duplicate claude_code rows — that duplicate `agentType` key crashes
-        // LazyColumn.
+        // Unknown types stay distinct from each other and from claude_code — a
+        // duplicate key crashes LazyColumn — while a repeated type collapses.
         val json = """
             [
               {"agent_type":"future_a","name":"A"},
               {"agent_type":"claude_code","name":"Claude Code"},
-              {"agent_type":"future_b","name":"B"}
+              {"agent_type":"future_b","name":"B"},
+              {"agent_type":"custom:goose","name":"goose"},
+              {"agent_type":"custom:goose","name":"goose again"}
             ]
         """.trimIndent()
         val agents = CodegClient.decodeAgentList(json)
-        assertEquals(listOf(AgentType.CLAUDE_CODE), agents.map { it.agentType })
+        assertEquals(
+            listOf(
+                AgentType.Unknown("future_a"), AgentType.CLAUDE_CODE,
+                AgentType.Unknown("future_b"), AgentType.Custom("goose"),
+            ),
+            agents.map { it.agentType },
+        )
         val keys = agents.map { it.agentType.wire }
         assertEquals("keys must be unique", keys.distinct().size, keys.size)
     }

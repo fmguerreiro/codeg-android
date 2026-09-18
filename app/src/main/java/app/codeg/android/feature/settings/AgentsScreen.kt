@@ -66,6 +66,9 @@ private fun AgentRow(agent: AcpAgentInfo, onToggle: (Boolean) -> Unit, onOpen: (
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(agent.name.ifEmpty { agent.agentType.displayName }, fontSize = 15.sp, color = colors.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 agent.installedVersion?.let { Text("v$it", fontSize = 11.sp, color = colors.textTertiary) }
+                if (agent.agentType is AgentType.Custom) {
+                    Text(stringResource(R.string.agents_custom_badge), fontSize = 11.sp, color = colors.textTertiary)
+                }
             }
             if (agent.description.isNotEmpty()) Text(agent.description, fontSize = 12.sp, color = colors.textTertiary, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }

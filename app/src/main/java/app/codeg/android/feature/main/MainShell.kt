@@ -7,9 +7,13 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Forum
@@ -198,7 +202,8 @@ fun MainShell(appViewModel: AppViewModel, servers: List<ServerProfile>) {
 
     Scaffold(
         containerColor = Color.Transparent,
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        // Only reaches routes without a bottom bar; the bar pads its own inset.
+        contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom),
         bottomBar = {
             if (showBottomBar && !wide) {
                 CodegBottomBar(
@@ -226,7 +231,8 @@ fun MainShell(appViewModel: AppViewModel, servers: List<ServerProfile>) {
         val contentModifier =
             if (showBottomBar && !wide) Modifier.nestedScroll(barConnection) else Modifier
         androidx.compose.foundation.layout.Row(
-            Modifier.padding(padding).fillMaxSize().then(contentModifier),
+            // Consumed so a route's own inset padding doesn't double this.
+            Modifier.padding(padding).consumeWindowInsets(padding).fillMaxSize().then(contentModifier),
         ) {
             if (showBottomBar && wide) CodegNavRail(currentRoute, onTab)
             NavHost(

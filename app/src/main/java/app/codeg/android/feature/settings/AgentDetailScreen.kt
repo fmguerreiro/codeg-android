@@ -115,6 +115,11 @@ fun AgentDetailContent(
     // — like Hermes' raw editor, they hide the host "Save" and the generic
     // native-config editor.
     val selfContained = agentType == AgentType.KIMI_CODE || agentType == AgentType.PI
+    // Agents whose config codeg cannot write from here: a custom agent's layout
+    // is unknown to it, and DeepSeek keeps its settings behind endpoints of its
+    // own. The header toggle writes on its own, so Save has nothing to do either.
+    val noNativeConfig = agentType is AgentType.Custom || agentType is AgentType.Unknown ||
+        agentType == AgentType.DEEPSEEK
     Column(Modifier.fillMaxSize().imePadding()) {
         Column(
             Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
@@ -136,12 +141,17 @@ fun AgentDetailContent(
                 AgentType.CURSOR -> CursorSection(detail, viewModel)
                 AgentType.KIMI_CODE -> AgentConfigKimiView(detail.agent, viewModel)
                 AgentType.PI -> AgentConfigPiView(detail.agent, viewModel)
+                // DeepSeek / Qoder / Antigravity have no structured panel yet;
+                // Qoder's and Antigravity's settings.json round-trips via Advanced.
+                else -> Unit
             }
 
-            if (agentType != AgentType.HERMES && !selfContained) AdvancedSection(detail, viewModel)
+            if (agentType != AgentType.HERMES && !selfContained && !noNativeConfig) {
+                AdvancedSection(detail, viewModel)
+            }
         }
 
-        if (!selfContained) {
+        if (!selfContained && !noNativeConfig) {
             // Surface WHY Save is disabled for the one gate a user can't otherwise
             // guess: API-key mode with nothing typed would persist a credential-less
             // auth mode and silently fall back to the browser login.
@@ -176,6 +186,9 @@ private fun AgentHeader(state: AgentDetailState, onToggle: (Boolean) -> Unit) {
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
                 VersionLine(state)
+                if (agent.agentType is AgentType.Custom) {
+                    Text(stringResource(R.string.agents_custom_badge), fontSize = 11.sp, color = colors.textTertiary)
+                }
             }
             Switch(
                 checked = agent.enabled,

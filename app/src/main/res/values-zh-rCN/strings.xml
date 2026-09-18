@@ -315,6 +315,7 @@
     <!-- ===== Settings · Agents ===== -->
     <string name="agents_empty_title">暂无智能体</string>
     <string name="agents_empty_subtitle">未注册任何智能体。</string>
+    <string name="agents_custom_badge">自定义</string>
     <!-- Agents · per-agent detail / config editor -->
     <string name="agents_detail_unavailable">不可用 —— 请先在服务器上安装后再启用。</string>
     <string name="agents_detail_not_installed">未安装</string>

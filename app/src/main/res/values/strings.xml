@@ -315,6 +315,8 @@
     <!-- ===== Settings · Agents ===== -->
     <string name="agents_empty_title">No agents</string>
     <string name="agents_empty_subtitle">No agents registered.</string>
+    <!-- Marks a user-registered ACP agent, as the web client does. -->
+    <string name="agents_custom_badge">Custom</string>
     <!-- Agents · per-agent detail / config editor -->
     <string name="agents_detail_unavailable">Not available — install it on the server to enable.</string>
     <string name="agents_detail_not_installed">Not installed</string>

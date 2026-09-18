@@ -596,9 +596,9 @@ data class AgentDraft(
                     cursorDenyRules = agent.cursorSettings?.permissionsDeny ?: emptyList(),
                     cursorCliConfigText = agent.cursorCliConfigJson ?: "",
                 )
-                // Kimi & Pi project their own state from `configJson` inside their
-                // self-contained panels.
-                AgentType.KIMI_CODE, AgentType.PI -> Unit
+                // Kimi & Pi project their own state inside their self-contained
+                // panels; the rest carry only the generic fields set above.
+                else -> Unit
             }
             return draft
         }
@@ -909,8 +909,9 @@ object AgentConfig {
                 force = draft.cursorForce,
             )
             // Kimi & Pi are self-contained (saved via acp_update_kimi_code_config /
-            // acp_update_pi_config), not the shared draft.
-            AgentType.KIMI_CODE, AgentType.PI -> Unit
+            // acp_update_pi_config); agents with no structured panel have nothing
+            // to bake, so their raw config/env text persists verbatim.
+            else -> Unit
         }
         return Applied(configText, envText, codexConfigTomlText, codexAuthJsonText)
     }

@@ -106,8 +106,12 @@ class EventStream(
                 ?: return null
 
             // Legacy global side-channel frames.
-            (root["channel"] as? JsonPrimitive)?.let { ch ->
-                return if (ch.contentOrNull == "__ready__") StreamFrame.Ready else null
+            (root["channel"] as? JsonPrimitive)?.contentOrNull?.let { channel ->
+                return if (channel == "__ready__") {
+                    StreamFrame.Ready
+                } else {
+                    StreamFrame.SideChannel(channel, root["payload"])
+                }
             }
 
             // Attach-protocol frames.

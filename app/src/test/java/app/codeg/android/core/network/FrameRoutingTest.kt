@@ -18,8 +18,12 @@ class FrameRoutingTest {
     }
 
     @Test
-    fun `other legacy channels are ignored`() {
-        assertNull(parse("""{"channel":"conversation://changed","payload":{}}"""))
+    fun `legacy side channels preserve channel and payload`() {
+        val frame = parse(
+            """{"channel":"conversation://changed","payload":{"kind":"deleted","id":7}}""",
+        ) as StreamFrame.SideChannel
+        assertEquals("conversation://changed", frame.channel)
+        assertEquals("""{"kind":"deleted","id":7}""", frame.payload.toString())
     }
 
     @Test

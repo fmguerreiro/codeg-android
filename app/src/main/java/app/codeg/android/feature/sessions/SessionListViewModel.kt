@@ -9,13 +9,16 @@ import app.codeg.android.core.datastore.ServerProfile
 import app.codeg.android.core.model.ConversationSummary
 import app.codeg.android.core.model.FolderDetail
 import app.codeg.android.core.network.CodegClient
+import app.codeg.android.core.network.StreamFrame
 import app.codeg.android.core.network.displayMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -102,6 +105,44 @@ class SessionListViewModel @Inject constructor(
             return
         }
         fetch(isInitial = true, force = changed)
+        watchServerChanges(profile)
+    }
+
+    private suspend fun watchServerChanges(profile: ServerProfile) {
+        var retryDelayMs = 1_000L
+        while (true) {
+            val stream = repository.eventStream(profile) ?: return
+            coroutineScope {
+                val refreshes = Channel<Unit>(Channel.CONFLATED)
+                val refresher = launch {
+                    for (ignored in refreshes) fetch(isInitial = false)
+                }
+                try {
+                    stream.frames().collect { frame ->
+                        when (frame) {
+                            StreamFrame.Ready -> {
+                                retryDelayMs = 1_000L
+                                refreshes.trySend(Unit)
+                            }
+                            is StreamFrame.SideChannel -> {
+                                if (frame.channel == "conversation://changed" ||
+                                    frame.channel == "conversations://bulk-changed" ||
+                                    frame.channel == "folder://changed"
+                                ) {
+                                    refreshes.trySend(Unit)
+                                }
+                            }
+                            else -> Unit
+                        }
+                    }
+                } finally {
+                    refreshes.close()
+                    refresher.join()
+                }
+            }
+            delay(retryDelayMs)
+            retryDelayMs = (retryDelayMs * 2).coerceAtMost(30_000L)
+        }
     }
 
     /** Pull-to-refresh / toolbar refresh — keeps the current list on screen. */

@@ -2,6 +2,7 @@ package app.codeg.android.core.network
 
 import app.codeg.android.core.model.EventEnvelope
 import app.codeg.android.core.model.LiveSessionSnapshot
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -36,6 +37,7 @@ object WsClientMessage {
 sealed interface StreamFrame {
     /** Legacy `{channel:"__ready__"}` — the link is usable; safe to attach/prompt. */
     data object Ready : StreamFrame
+    data class SideChannel(val channel: String, val payload: JsonElement?) : StreamFrame
     data class Snapshot(val snapshot: LiveSessionSnapshot) : StreamFrame
     data class Replay(val events: List<EventEnvelope>) : StreamFrame
     data class Event(val envelope: EventEnvelope) : StreamFrame

@@ -461,6 +461,7 @@ class SessionDetailViewModel @Inject constructor(
                         }
                     }
                     StreamFrame.Pong -> Unit
+                    is StreamFrame.SideChannel -> Unit
                     is StreamFrame.Closed -> {
                         if (awaitAttach && !attached.isCompleted) {
                             attached.completeExceptionally(StreamAttachFailed(frame.reason))

@@ -63,12 +63,12 @@ class CodegJsonTest {
     }
 
     @Test
-    fun `unknown enum values fall back instead of throwing`() {
+    fun `unknown enum values preserve agents and fall back statuses`() {
         val c = CodegJson.response.decodeFromString<ConversationSummary>(
             """{"id":1,"folder_id":1,"agent_type":"brand_new_agent","status":"weird_status",
                "message_count":0,"created_at":"2024-01-02T03:04:05Z","updated_at":"2024-01-02T03:04:05Z"}""",
         )
-        assertEquals(AgentType.CLAUDE_CODE, c.agentType)
+        assertEquals(AgentType.Unknown("brand_new_agent"), c.agentType)
         assertEquals(ConversationStatus.OTHER, c.status)
     }
 

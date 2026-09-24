@@ -3,6 +3,7 @@ package app.codeg.android.feature.projects
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.codeg.android.core.data.ServerRepository
+import app.codeg.android.core.data.watchListChanges
 import app.codeg.android.core.datastore.ServerProfile
 import app.codeg.android.core.model.ConversationSummary
 import app.codeg.android.core.model.FolderDetail
@@ -55,6 +56,7 @@ class ProjectsViewModel @Inject constructor(
         client = repository.client(profile)
         if (changed) _ui.update { ProjectsUiState() }
         fetch(initial = true)
+        repository.watchListChanges(profile) { fetch(initial = false) }
     }
 
     fun refresh() {
